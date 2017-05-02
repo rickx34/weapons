@@ -3,6 +3,7 @@
 import argparse
 import socket
 import sys
+import re
 from threading import Thread, Semaphore
 
 
@@ -20,20 +21,27 @@ COMMON_PORTS = [5,7,9,11,13,17,18,19,20,21,22,23,25,37,39,42,43,49,50,53,63,67,6
 
 UNIX_PORTS = [512,512,513,513,514,514,515,517,518,519,520,520,521,525,526,530,531,532,533,540,543,544,548,556]
 
-print_lock = Semaphore(value=1)
+SERVICES = {}
+with open('./services', 'r') as w:
+    contents = w.readlines()
+    for a in contents:
+        line = a.split('\t')
+        SERVICES[int(line[1].split('/')[0])] = { 'service': line[0], 'proto': line[1].split('/')[1]}
+
+print_lock = Semaphore(value=1)   
 
 def scan_open_ports(hostname):
     pass
 
 def scan_port(hostname, port):
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    service = SERVICES[port]['service']
+    proto = SERVICES[port]['proto']
     try:
         serversocket.connect((hostname, port))
-        serversocket.send(b"Hello\r\n")
-        data = serversocket.recv(100)
-        service = data.rstrip().decode('utf-8')
         print_lock.acquire()
-        print(bcolors.OKGREEN, "{}\t\t[ OPEN ]\t{}".format(port, service), bcolors.ENDC)
+        sock = str(port) + "/" + proto
+        print(bcolors.OKGREEN, "{:<15}{:<15}{:<15}".format(sock, '[ OPEN ]', service), bcolors.ENDC)
     except KeyboardInterrupt:
         sys.exit(1)
     except:
